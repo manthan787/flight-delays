@@ -1,0 +1,17 @@
+# Project files
+.idea
+*.iml
+.DS_STORE
+
+report_*
+
+# Compiled class file
+*.class
+
+# Package Files #
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
