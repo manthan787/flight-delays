@@ -1,7 +1,13 @@
 package utils;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
+
 /***
- * @author: Manthan Thakar & Vineet Trivedi
+ * @author: Manthan Thakar
  * Description: Gets input as a record(String) and performs sanity checks against that record.
  */
 
@@ -9,12 +15,13 @@ public class Parser {
     private CSVRecord r;
     private int year;
     private int month;
-    private int airlineID;
-    private int airportID;
+    private String airline;
+    private String airport;
     private boolean cancelled;
     private float arrDelNew;
     private int crsElapsedTime;
     private static final  int EXPECTED_FIELD_COUNT = 110;
+    DateFormat df = new SimpleDateFormat("hhmm");
 
     public Parser(CSVRecord r) {
         this.r = r;
@@ -36,23 +43,31 @@ public class Parser {
         return month;
     }
 
-    public int getAirlineID() {
-        return airlineID;
-    }
-
-    public int getAirportID() {
-        return airportID;
-    }
-
     public boolean isCancelled() {
         return cancelled;
+    }
+
+    public String getAirline() {
+        return airline;
+    }
+
+    public void setAirline(String airline) {
+        this.airline = airline;
+    }
+
+    public String getAirport() {
+        return airport;
+    }
+
+    public void setAirport(String airport) {
+        this.airport = airport;
     }
 
     public boolean sanityCheck() {
         try {
             // Check if number of fields is as expected
             if (r.getFieldCount() != EXPECTED_FIELD_COUNT) return false;
-            if (! isYear(Integer.parseInt(r.get(0)))) return false;//YEAR
+            if (! isYear(Integer.parseInt(r.get(0)))) return false;
 
             // check if the cancelled field has valid (binary) values
             int cancelled = Integer.parseInt(r.get(47));
@@ -66,14 +81,6 @@ public class Parser {
 
             // Check if airportID is positive
             if (! isPositive(Integer.parseInt(r.get(20)))) return false;
-
-            // Check Arrival Times
-            if (! isPositive(Integer.parseInt(r.get(40)))) return false;
-            if (! isPositive(Integer.parseInt(r.get(41)))) return false;
-
-            // Check departure times
-            if (! isPositive(Integer.parseInt(r.get(29)))) return false;
-            if (! isPositive(Integer.parseInt(r.get(30)))) return false;
 
             // Check elapsed times
             if (!(Integer.parseInt(r.get(51)) > 0)) return false;
@@ -108,11 +115,9 @@ public class Parser {
     private boolean locationNamesEmpty() {
         // Return true if any of Origin, Destination,  CityName, State, StateName
         // are empty
-        if (isEmpty(r.get(14)) || isEmpty(r.get(15)) || isEmpty(r.get(18))
-            || isEmpty(r.get(16))|| isEmpty(r.get(23))|| isEmpty(r.get(24))
-            || isEmpty(r.get(25))|| isEmpty(r.get(27)))
-            return true;
-        return false;
+        return isEmpty(r.get(14)) || isEmpty(r.get(15)) || isEmpty(r.get(18))
+                || isEmpty(r.get(16)) || isEmpty(r.get(23)) || isEmpty(r.get(24))
+                || isEmpty(r.get(25)) || isEmpty(r.get(27)) || isEmpty(r.get(8));
     }
 
     private boolean isEmpty(String s) {
@@ -122,45 +127,49 @@ public class Parser {
     private void setRequiredFields() {
         this.year = Integer.parseInt(r.get(0));
         this.month = Integer.parseInt(r.get(2));
-        this.airportID = Integer.parseInt(r.get(20));
-        this.airlineID = Integer.parseInt(r.get(7));
+        this.airport = r.get(23);
+        this.airline = r.get(8);
     }
 
-    public boolean sanityTests() {
-        int crsArrTime = Integer.parseInt(r.get(40));
-        int arrTime = Integer.parseInt(r.get(41));
-        int crsDeptTime = Integer.parseInt(r.get(29));
-        crsElapsedTime = Integer.parseInt(r.get(50));
-        cancelled = ((Integer.parseInt(r.get(47))) == 1) ? true : false;
-        int actualElapsedTime = Integer.parseInt(r.get(51));
-        int depTime = Integer.parseInt(r.get(30));
-        // various other checks mentioned in the assignment
-        int timezone = crsArrTime - crsDeptTime - crsElapsedTime;
-        float arrDel = Float.parseFloat(r.get(42));
-        arrDelNew = Float.parseFloat(r.get(43));
-        float arrDel15 = Float.parseFloat(r.get(44));
-        if (timezone % 60 != 0) return false;
-        if (!cancelled) {
-            if((arrTime - depTime - actualElapsedTime - timezone) != 0) return false;
-            if (arrDel > 0)
-                if (arrDel !=  arrDelNew) return false;
-            if (arrDel < 0)
-                if (arrDelNew != 0) return false;
-            if (arrDel >= 15)
-                if (arrDel15 != 1) return false;
+    private boolean sanityTests() {
+        try {
+            Date crsArrTime = df.parse(r.get(40));
+            Date arrTime = df.parse(r.get(41));
+            Date crsDeptTime = df.parse(r.get(29));
+            crsElapsedTime = Integer.parseInt(r.get(50));
+            cancelled = (Integer.parseInt(r.get(47))) == 1;
+            int actualElapsedTime = Integer.parseInt(r.get(51));
+            Date depTime = df.parse(r.get(30));
+            // various other checks mentioned in the assignment
+            long timezone = TimeUnit.MILLISECONDS.toMinutes(crsArrTime.getTime() - crsDeptTime.getTime()) - crsElapsedTime;
+            float arrDel = Float.parseFloat(r.get(42));
+            arrDelNew = Float.parseFloat(r.get(43));
+            float arrDel15 = Float.parseFloat(r.get(44));
+            if (timezone % 60 != 0) return false;
+            if (!cancelled) {
+                if((TimeUnit.MILLISECONDS.toMinutes(arrTime.getTime() - depTime.getTime()) - actualElapsedTime - timezone) != 0) return false;
+                if (arrDel > 0)
+                    if (arrDel !=  arrDelNew) return false;
+                if (arrDel < 0)
+                    if (arrDelNew != 0) return false;
+                if (arrDel >= 15)
+                    if (arrDel15 != 1) return false;
+            }
+        } catch (ParseException e) {
+            return false;
         }
         return true;
     }
 
-    public boolean isMonth(int month) {
+    private boolean isMonth(int month) {
         return (month <= 12 && month > 0);
     }
 
-    public boolean isYear(int year) {
+    private boolean isYear(int year) {
         return (year > 1800 && year < 2018);
     }
 
-    public boolean isPositive(int num) {
+    private boolean isPositive(int num) {
         return num > 0;
     }
 }
