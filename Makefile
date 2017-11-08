@@ -14,18 +14,12 @@ compile:
 	javac -cp $(MY_CLASSPATH):$(COMPILE_DIR):. -d bin src/**/*.java
 
 clean:
-	$(HADOOP_HOME)/bin/hdfs dfs -rm -rf $(CLEAN_DATA_PATH)
-	$(HADOOP_HOME)/bin/hdfs dfs -rm -rf flight-delay
-	$(HADOOP_HOME)/bin/hdfs dfs -rm -rf activity-airline
-	$(HADOOP_HOME)/bin/hdfs dfs -rm -rf activity-airport
 	rm -r bin/*
+	$(HADOOP_HOME)/bin/hdfs dfs -rm -rf $(CLEAN_DATA_PATH)
 
 run: build
-#	$(HADOOP_HOME)/bin/hadoop jar FlightDelay.jar jobs.CleanDataDriver $(INPUT_PATH) $(CLEAN_DATA_PATH)
-#	$(HADOOP_HOME)/bin/hadoop jar FlightDelay.jar jobs.DelayDriver $(CLEAN_DATA_PATH) flight-delay
-#	$(HADOOP_HOME)/bin/hadoop jar FlightDelay.jar jobs.ActivityJobDriver $(CLEAN_DATA_PATH) activity-airline airlineID
-#	$(HADOOP_HOME)/bin/hadoop jar FlightDelay.jar jobs.ActivityJobDriver $(CLEAN_DATA_PATH) activity-airport airportID
-#	Rscript -e "rmarkdown::render('report.Rmd')"
+	$(HADOOP_HOME)/bin/hadoop jar FlightDelay.jar jobs.CleanDataDriver $(INPUT_PATH) $(CLEAN_DATA_PATH)
+	Rscript -e "rmarkdown::render('report.Rmd')"
 
 jar:
 	jar cvfm FlightDelay.jar MANIFEST.MF -C bin/ .
