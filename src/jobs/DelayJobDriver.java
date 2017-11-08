@@ -27,12 +27,12 @@ import java.io.IOException;
  * directly to hdfs.
  * 
  */
-public class CleanDataDriver extends Configured implements Tool {
+public class DelayJobDriver extends Configured implements Tool {
 
     public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
         conf.set("mapreduce.output.textoutputformat.separator", ",");
-        ToolRunner.run(conf, new CleanDataDriver(), args);
+        ToolRunner.run(conf, new DelayJobDriver(), args);
     }
 
     @Override
@@ -40,7 +40,7 @@ public class CleanDataDriver extends Configured implements Tool {
         FileSystem hdfs = FileSystem.get(getConf());
         try {
             Job job = Job.getInstance(getConf(), "Clean Data");
-            job.setJarByClass(CleanDataDriver.class);
+            job.setJarByClass(DelayJobDriver.class);
             job.setMapperClass(DelayMapper.class);
             job.setReducerClass(DelayReducer.class);
             job.setOutputKeyClass(Text.class);
