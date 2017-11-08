@@ -1,22 +1,22 @@
 package jobs;
 
-import mappers.CleanRecordMapper;
+import mappers.DelayMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import writables.CleanDataWritable;
+import reducers.DelayReducer;
 
 import java.io.IOException;
 /***
- * @author: Manthan Thakar & Vineet Trivedi
+ * @author: Manthan Thakar
  * 
  * Job Description:
  * This job is used to clean the input data.
@@ -31,6 +31,7 @@ public class CleanDataDriver extends Configured implements Tool {
 
     public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
+        conf.set("mapreduce.output.textoutputformat.separator", ",");
         ToolRunner.run(conf, new CleanDataDriver(), args);
     }
 
@@ -40,10 +41,10 @@ public class CleanDataDriver extends Configured implements Tool {
         try {
             Job job = Job.getInstance(getConf(), "Clean Data");
             job.setJarByClass(CleanDataDriver.class);
-            job.setMapperClass(CleanRecordMapper.class);
-            job.setOutputKeyClass(LongWritable.class);
-            job.setOutputValueClass(CleanDataWritable.class);
-            job.setOutputFormatClass(SequenceFileOutputFormat.class);
+            job.setMapperClass(DelayMapper.class);
+            job.setReducerClass(DelayReducer.class);
+            job.setOutputKeyClass(Text.class);
+            job.setOutputValueClass(FloatWritable.class);
             Path outputPath = new Path(args[1]);
 
             // Remove output path if already exists
