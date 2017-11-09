@@ -3,7 +3,6 @@ package jobs;
 import mappers.DelayMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.Text;
@@ -37,21 +36,15 @@ public class DelayJobDriver extends Configured implements Tool {
 
     @Override
     public int run(String[] args) throws Exception {
-        FileSystem hdfs = FileSystem.get(getConf());
         try {
             Job job = Job.getInstance(getConf(), "Clean Data");
             job.setJarByClass(DelayJobDriver.class);
             job.setMapperClass(DelayMapper.class);
+            job.setCombinerClass(DelayReducer.class);
             job.setReducerClass(DelayReducer.class);
             job.setOutputKeyClass(Text.class);
             job.setOutputValueClass(FloatWritable.class);
             Path outputPath = new Path(args[1]);
-
-            // Remove output path if already exists
-            if(hdfs.exists(outputPath)) {
-                hdfs.delete(outputPath, true);
-            }
-
             FileInputFormat.addInputPath(job, new Path(args[0]));
             FileInputFormat.setInputDirRecursive(job, true);
             FileOutputFormat.setOutputPath(job, outputPath);
