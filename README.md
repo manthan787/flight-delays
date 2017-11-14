@@ -1,6 +1,6 @@
 # A8 - Visualizing Delays
 
-# Requirements
+### Requirements
 
 Install `Java 1.8`
 
