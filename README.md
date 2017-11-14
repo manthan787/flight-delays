@@ -1,17 +1,23 @@
-# A4 - On-Time Performance Data
-## Authors: Manthan Thakar, Vineet Trivedi and Sharad Boni
+# A8 - Visualizing Delays
+## Authors: Manthan Thakar
 
-### Goal:
-To plot the mean delay of the five most active airlines and for the five most active airports in the country.
+# Requirements
 
-### System Design:
-We have used 5 jobs to achieve this goal.
+Install `Java 1.8`
 
-* 1 Job to clean the data.
-This job does not have a reducer. The mapper of this job writes its output (CleanDataWritable) to hdfs.
-It forms the base for all other jobs. The remaining jobs need not iterate over the data again and get all their information from the CleanDataWritables.
-* 2 MR Jobs that calculate the mean flight delay and mean airport delay.
-* 2 MR Jobs that calculate the mean delay for the 5 most active airlines and 5 most active airports.
+Download `Hadoop 2.8.1`
+
+**R Requirements**
+
+Install following dependencies to avoid errors while generating the Rmarkdown Report.
+
+From your R console execute following commands:
+
+```
+install.packages("ggplot2")
+install.packages("RColorBrewer")
+install.packages("gridExtra")
+```
 
 ### How to run the project end to end:
 
