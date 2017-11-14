@@ -18,10 +18,16 @@ knitr::opts_chunk$set(echo = TRUE)
 
 - The previous submission had an erroneous condition for validating `timezone` values, which resulted in dropping most of the records. In this submission, that is fixed by using `time` subtractions instead of `float` subtractions for Arrival times and departure times.
 
-- With the previous erroneous approach for file `323.csv` we observed 65K valid records. This number increases to 240K+ with the new (correct) approach.
+- With the previous erroneous approach for file `323.csv` we observed 65K valid records. This number increases to 240K+ with the new approach.
 
 ### The airlineID and airportID hell
 
 - Previously, the numeric IDs for both airlines and airports were used. This resulted in using an extra lookup while plotting graphs.
 
 - In this approach we use `CARRIER` and `DEST` fields in the mapreduce jobs.
+
+### Visualizations
+
+**Heat Maps, not Network Graphs!** - Instead of using network graphs to visualize delays, idea of using heat maps is explored.
+
+**Visualizing delays per year and per month** - The mean delays for per year and per month were not visualized before, those are visualized and analyzed in the new assignment.
