@@ -12,6 +12,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import reducers.DelayReducer;
+import writables.DelayWritable;
 
 import java.io.IOException;
 /***
@@ -43,7 +44,7 @@ public class DelayJobDriver extends Configured implements Tool {
             job.setCombinerClass(DelayReducer.class);
             job.setReducerClass(DelayReducer.class);
             job.setOutputKeyClass(Text.class);
-            job.setOutputValueClass(FloatWritable.class);
+            job.setOutputValueClass(DelayWritable.class);
             Path outputPath = new Path(args[1]);
             FileInputFormat.addInputPath(job, new Path(args[0]));
             FileInputFormat.setInputDirRecursive(job, true);
