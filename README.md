@@ -1,5 +1,4 @@
 # A8 - Visualizing Delays
-## Authors: Manthan Thakar
 
 # Requirements
 
