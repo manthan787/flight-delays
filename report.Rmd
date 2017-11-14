@@ -15,6 +15,7 @@ output: pdf_document
 library(ggplot2)
 library(RColorBrewer) 
 library(gridExtra)
+library(grid)
 RESOURCE_DIR = "resources/"
 ```
 
@@ -24,32 +25,31 @@ Visualize the mean delay of the five most active airlines and for the five most 
 
 # Data Processing
 
-In order to obtain delay data for airports and airline, we gather the delay data for each airline and airport per year and per month by discarding invalid records. A **single** MapReduce job is run for that purpose.
+In order to obtain delay data for airports and airline, we gather the delay data for each airline and airport per year and per month by discarding invalid records. A **single** Map Reduce job (`DelayJobDriver.java`) is run for that purpose. 
 
-**DelayWritable**
+The output types of the job are described below:
+
+**Output Key (Text)**: The output key of the `DelayJob` is a comma-separated `Text` object containing fields, `airline`, `airport`, `year` and `month`. This provides the flexibility to extract delay data per airline, per airport, per year and per month without running separate jobs.
+
+**Output Value (DelayWritable)**: DelayWritable is a custom writable that consists of two fields: **Delay** in minutes and **Count** which is the count of flights for the given key. It's important to emit count along with the delay so that it can be used to calculate correct mean delays as well as to find the most active airports and airlines.
+
+The Map and Reduce phase of the job are described below:
 
 **Mapper**: The map phase of the mapreduce job is responsible for 
     - Validating each record by performing sanity checks
-    - Emitting valid records with `airline`, `airport`, `year` and `month` as a composite key, `delay` and  flight count for a flight in the same year and month as value
+    - Emitting valid records as key-value pairs
 
-**Reducer**: In the reduce phase all the same flights are aggregated and we calculate the mean delay for each flight. To reduce the shuffling of data over the network, we use the same reducer as **combiner** as well. 
-
-Since, there could be many similar flights in the same month of the same year, using combiner in our design significantly reduces the amount of data that is shuffled for the reduce phase.
+**Reducer**: In the reduce phase all the flights having the same output key (same airline, airport, year and month) are combined by aggregating the delay and flight count in `DelayWritable`. Since, there could be many flights with same key in one file, we apply the same reducer as **combiner** which significantly reduced the amount of data shuffled for the reduce phase.
 
 ## Performance
-
-#### AWS Cluster Configurations
-
-The Amazon Map Reduce cluster was setup using Amazon EMR.
 
 ```{r echo=FALSE, message=FALSE}
 x = c("Instance Type", "Hadoop Distribution", "Memory", "Storage", "vCPU", "No. Nodes")
 y = c("m3.xlarge", "Amazon 2.7.3 (EMR 5.8.0)", "15GB", "2 x 40GB SSD", "4", "4")
 df = data.frame(config=x, value=y)
-#pandoc.table(df, style="rmarkdown")
 ```
 
-|       config        |          value           |
+|       AWS EMR Cluster Configuration            |
 |:-------------------:|:------------------------:|
 |    Instance Type    |        m3.xlarge         |
 | Hadoop Distribution | Amazon 2.7.3 (EMR 5.8.0) |
@@ -58,12 +58,7 @@ df = data.frame(config=x, value=y)
 |        vCPU         |            4             |
 |      No. Nodes      |            4             |
 
-
-On a 4-node m3.xlarge cluster, it takes about **13 minutes** to run our job. Note that this is a noticable improvement over previous submission where it took **19 minutes** to run jobs. This is because 3 mapreduce jobs were employed in that approach.
-
-## Most Active Airports and Airlines
-
-We plot the top 5 most active airports and airlines below along with the number of flights as the measure of activity. We observe that _South West Airlines_ is the most active airline and _ATL_ is the most active airport, while _ORD_ closely comes at second place.
+On a 4-node m3.xlarge cluster, it takes about **13 minutes** to run our job. Note that this is a noticeable improvement over previous submission where it took **19 minutes** to run jobs. This is because 3 mapreduce jobs were employed in that approach.
 
 ```{r cache=TRUE, echo=FALSE, message=FALSE}
 read_files = function(dirname, col_names=c()) {
@@ -104,7 +99,10 @@ airport_lookup = read.csv(paste(RESOURCE_DIR, "dest_to_full_name.csv", sep=""), 
 names(airport_lookup) = c("airport", "full")
 airport_lookup = airport_lookup[!duplicated(airport_lookup[c("airport")]), ]
 top_5_airports = merge(top_5_airports, airport_lookup)
-top_5_airports.plot = ggplot(top_5_airports, aes(x=airport, y=activity, color=full)) + geom_bar(stat="identity", fill="white") + labs(colour = "Airports", y= "No. of Flights", x="Airport Code",title = "No. of Flights to Top 5 Airports")  + scale_y_continuous(position="left", 
+top_5_airports.plot = ggplot(top_5_airports, aes(x=airport, y=activity, col=full)) +
+  geom_bar(stat="identity", fill="white") + 
+  labs(colour = "Airports", y= "No. of Flights", x="Airport Code",title = "No. of Flights to Top 5 Airports")  + 
+  scale_y_continuous(position="left", 
                        labels=function(x) ifelse(x>=1000000, paste0(x/1000000,"M"), ifelse(x==0, x, paste0(x/1000,"K"))))
 airline_lookup = read.csv(paste(RESOURCE_DIR, "airline_lookup.csv", sep=""), header=T)
 names(airline_lookup) = c("airline", "full")
@@ -112,32 +110,26 @@ airline_lookup = airline_lookup[!duplicated(airline_lookup[c("airline")]), ]
 top_5_airlines = merge(top_5_airlines, airline_lookup)
 top_5_airlines.plot = ggplot(top_5_airlines, aes(x=airline, y=activity, col=full)) +
   labs(colour = "Airlines",y= "No. of Flights",x="Airline Code",title = "No. of Flights from Top 5 Airlines") +
-  geom_bar(stat="identity", fill="white") + 
+  geom_bar(stat="identity", fill="white") +
   scale_y_continuous(position="left", 
                        labels=function(x) ifelse(x>=1000000, paste0(x/1000000,"M"), ifelse(x==0, x, paste0(x/1000,"K"))))
-grid.arrange(top_5_airlines.plot, top_5_airports.plot, ncol=2, widths= c(7, 7), heights=c(5, 5))
+grid.arrange(top_5_airlines.plot, top_5_airports.plot, ncol=2, widths= c(7, 7), heights=c(5, 5), top= "Figure 1: Top 5 Most active airports & airlines")
 ```
 
-# Delays
+## Most Active Airports and Airlines
 
-```{r fig.width=12,fig.height=3,fig.show='hold',fig.align='center', echo=FALSE}
+Figure 1 shows top 5 most active airports and airlines along with the number of flights as the measure of activity. _South West Airlines_ is the most active airline and _Atlanta's Hartsfield-Jackson_ is the most active airport, while _Chicago's O`Hare_ closely comes at second place.
+
+## Mean delay per year
+
+In this section, mean delays per year for top 5 airlines and airports are analyzed. Figure 2 shows mean delay per year for top airlines and airports and apply loess smoothing to obtain a trend line with confidence intervals. Note that, outliers are clipped in the graphs shown below in favor of readable plots.
+
+Among the top 5 airlines in fig 2.1, North West airlines (NW) seems to be having very high variations in mean delays across years. Mean delays for NW seem to be decreasing starting from 1988 to 1993. They increase again starting from 1994.
+
+It can also be observed that United Airlines (UA) has wider error bounds, indicating highly varying mean delays across years, making the pattern less predictable. Moreover, South West airlines (WN) has been seeing steady increase in mean delays.
+
+```{r fig.width=12,fig.height=3,fig.show='hold',fig.align='center', echo=FALSE, eval=T, cache=T}
 top_airports = delays[((delays$airportID %in% top_5_airports$airport) & !(delays$airlineID %in% c("RU"))), ]
-agg = aggregate(cbind(mDelay, count) ~ airlineID + airportID, data=top_airports, FUN=sum)
-agg$mDelay = agg$mDelay / agg$count
-hm.palette <- colorRampPalette(rev(brewer.pal(9, 'Spectral')), space='Lab')
-ggplot(agg, aes(y=airportID, x=airlineID)) + 
-  geom_tile(aes(fill=mDelay), color="white") + 
-  scale_fill_gradient(low = "white", high = "red") + 
-  labs(x = "Airlines",y="Airport",col = "Delay in Minutes", title="Fig 1. Mean delays from all airlines to top 5 airports across all years") + 
-  theme_light() + 
-  coord_fixed(ratio = 1) + 
-  theme(axis.text.x = element_text(angle = 90)) + 
-  guides(fill=guide_colourbar(title="Mean Delay in Minutes"))
-# To add labels to tiles
-#geom_text(aes(label = round(mDelay, 1)))
-``` 
-
-```{r fig.width=12,fig.height=3,fig.show='hold',fig.align='center', echo=FALSE, eval=T}
 top_airlines = delays[(delays$airlineID %in% top_5_airlines$airline), ]
 airports_flights_count = aggregate(cbind(mDelay, count) ~ airportID, data=top_airlines, FUN=sum)
 airports_flights_count.frequent = airports_flights_count[(airports_flights_count$count) > 200000, ]
@@ -152,18 +144,20 @@ p = ggplot(top_airlines.agg[(top_airlines.agg$airportID %in% airports_flights_co
   theme(axis.text.x = element_text(angle = 90))
 ```
 
-```{r echo=FALSE, fig.width=12, fig.height=5, message=F, warning=F, eval=T}
+```{r echo=FALSE, fig.width=12, fig.height=5, message=F, warning=F, eval=T, cache=T}
 delays_per_year = aggregate(cbind(mDelay, count) ~ airlineID + year, data=top_airlines, FUN=sum)
+top_airlines.per_year = aggregate(cbind(count) ~ airlineID + year, data=top_airlines, FUN=sum)
 delays_per_year$mDelay = delays_per_year$mDelay / delays_per_year$count
 p1 = ggplot(delays_per_year, aes(x=year, y=mDelay)) + 
   geom_point() + geom_smooth(method="loess") + 
   facet_grid( . ~ airlineID) + 
   scale_x_continuous("Year (1987 - 2015)", breaks=seq(1988, 2015, by=6)) + 
   scale_y_continuous(labels=function(x) paste0(x," min"), limits=c(5, 15)) +
-  theme(axis.text.x=element_blank()) + 
-  labs(x = "Year (1987 - 2015)",y="Mean Delay", title="Mean delays for top 5 airlines per year")
+  theme(axis.text.x= element_text(angle = 90)) + 
+  labs(x = "Year (1987 - 2015)",y="Mean Delay", title="Fig 2.1. Mean delays for top 5 airlines per year")
 
 delays_per_year = aggregate(cbind(mDelay, count) ~ airportID + year, data=top_airports, FUN=sum)
+top_airports.per_year = aggregate(cbind(count) ~ airportID + year, data=top_airports, FUN=sum)
 delays_per_year$mDelay = delays_per_year$mDelay / delays_per_year$count
 p2 = ggplot(delays_per_year, aes(x=year, y=mDelay)) +
   geom_point() +
@@ -171,40 +165,83 @@ p2 = ggplot(delays_per_year, aes(x=year, y=mDelay)) +
   facet_grid( . ~ airportID) +
   scale_x_continuous("Year (1987 - 2015)", breaks=seq(1988, 2015, by=6)) + 
   scale_y_continuous(labels=function(x) paste0(x," min"), limits = c(5, 20)) +
-  theme(axis.text.x=element_blank()) +
-  labs(x = "Year (1987 - 2015)", y="Mean Delay", title="Mean delays for top 5 airports per year")
-grid.arrange(p1, p2, nrow=2)
+  theme(axis.text.x= element_text(angle = 90)) +
+  labs(x = "Year (1987 - 2015)", y="Mean Delay", title="Fig 2.2. Mean delays for top 5 airports per year")
+grid.arrange(p1, p2, nrow=2, bottom="Figure 2: Mean delay per year for top 5 airlines & airports")
 ``` 
 
-```{r fig.width=8, fig.height=7, echo=F, message=F, warning=F}
+```{r fig.width=12,fig.height=3,fig.show='hold',fig.align='center', echo=FALSE, cache=T}
+agg = aggregate(cbind(mDelay, count) ~ airlineID + airportID, data=top_airports, FUN=sum)
+agg$mDelay = agg$mDelay / agg$count
+hm.palette <- colorRampPalette(rev(brewer.pal(9, 'Spectral')), space='Lab')
+g = ggplot(agg, aes(y=airportID, x=airlineID)) + 
+  geom_tile(aes(fill=mDelay), color="white") + 
+  scale_fill_gradient(low = "white", high = "red") + 
+  labs(x = "Airlines",y="Airport",col = "Delay in Minutes") + 
+  theme_light() + 
+  coord_fixed(ratio = 1) + 
+  theme(axis.text.x = element_text(angle = 90)) + 
+  guides(fill=guide_colourbar(title="Mean Delay in Minutes"))
+# To add labels to tiles
+#geom_text(aes(label = round(mDelay, 1)))
+grid.arrange(g, bottom="Figure 3: Mean delays from all airlines to top 5 airports across all years")
+``` 
+
+Similarly in fig 2.2, we can observe that the mean delays for ATL airport increases up to 2006 and then steeply decreases. Interestingly, LAX and ORD seem to be having exactly the opposite trends for mean delays. While the delay trend in ORD across years roughly resembles letter "S", the trend line in LAX looks like an upside-down version of it. The Denver airport (DEN) seems to be having the least variation in delays with trend line staying around 10 minutes mark.
+
+## Mean delay across all years
+
+Figure 3 shows a heat map of mean delays across all years from all airlines to top 5 airports. Each square block in the heat map shows the mean delay from an airline to an airport and the delay is proportional to the intensity of the color in that block. It's important to note that the white blocks with lines inside show NA values, meaning there's no flight data available from an airline to a particular destination.
+
+Among top 5 airports, _ORD_ contains many dark blocks across all airlines, suggesting mean delays above 15 minutes while _PHX_ has most of the mean delays close to 10 minutes. As a new airline, you wouldn't want your first flight to go to ORD.
+
+Out of all airlines, NK - Spirit Airlines, seems to be having highest mean delays while traveling to top 5 airports. The delays increase especially for LAX and ORD. _AS_ seems to be having least delays going to top 5 airports. As a traveler going to Los Angeles, from the historical data, you'd be better off traveling in _MQ_ than _NK_.
+
+All of the top 5 airlines relatively have lesser delays while going to top 5 airports, despite of having higher volume of flights.
+
+## Mean delays per month
+
+```{r fig.width=12,fig.height=10,fig.show='hold',fig.align='center', echo=F, message=F, warning=F, cache=T}
 delays_per_year_month = aggregate(cbind(mDelay, count) ~ airportID + year + month, data=top_airports, FUN=sum)
 delays_per_year_month$month = as.factor(delays_per_year_month$month)
 delays_per_year_month$mDelay = delays_per_year_month$mDelay / delays_per_year_month$count
 ymp1 = ggplot(delays_per_year_month, aes(x=month.abb[month], y=year)) + 
-  theme(text=element_text(size=9), axis.text.x = element_text(angle = 90)) + 
+  theme(axis.text.x = element_text(angle = 90)) + 
   geom_tile(aes(fill=mDelay)) + 
   facet_grid(.~airportID) + 
   scale_fill_gradientn(colors=hm.palette(90)) + 
   scale_x_discrete("Month", limits = month.abb) + 
   scale_y_continuous("Year", breaks=seq(1988, 2015, by=3)) +
-  labs(title="Mean delays for top 5 airports per year per month") +   
+  labs(title="Fig 4.2. Mean delays for top 5 airports per month") +   
   guides(fill=guide_colourbar(title="Mean Delay in Minutes"))
 
 delays_per_year_month = aggregate(cbind(mDelay, count) ~ airlineID + year + month, data=top_airlines, FUN=sum)
 delays_per_year_month$month = as.factor(delays_per_year_month$month)
 delays_per_year_month$mDelay = delays_per_year_month$mDelay / delays_per_year_month$count
 ymp2 = ggplot(delays_per_year_month, aes(x=month.abb[month], y=year)) + 
-  theme(text=element_text(size=9), axis.text.x = element_text(angle = 90)) + 
+  theme(axis.text.x = element_text(angle = 90)) + 
   geom_tile(aes(fill=mDelay)) + 
   scale_fill_gradientn(colors=hm.palette(90)) + 
   facet_grid(.~airlineID) + 
   scale_x_discrete("Month", limits = month.abb) + 
   scale_y_continuous("Year", breaks=seq(1988, 2015, by=3)) +
-  labs(title="Mean delays for top 5 airlines per year per month") +   
+  labs(title="Fig 4.1. Mean delays for top 5 airlines per month") +   
   guides(fill=guide_colourbar(title="Mean Delay in Minutes"))
-grid.arrange(ymp1, ymp2, nrow=2)
+grid.arrange(ymp2, ymp1, nrow=2, bottom="Figure 4: Mean delays per month for top 5 airlines & airports")
 ```
 
+Figure 4 shows mean delays for top 5 airlines and airports across all months of all years, as a heat map.
+We decided to explore the idea of visualizing mean delays per month per year, because it wouldn't be useful to aggregate delays for a month across all years. As Figure 3, the darker the block higher the delay. But here, different delay categories have different colors. In general, blue blocks indicate smaller delays and red blocks indicate higher delays. Blocks with shades of green, yellow and orange generally fall into medium range.
+
+Figure 4.1 shows mean delays per month for top 5 airlines for all years. For WN, which is also the most active airline, September seems to be the month having least delays across all years. In fact, for all the top 5 airlines, in terms of delays September seems to be the best month across all years. Conversely, December is the worst month for delays for all of the top 5 airlines.
+
+Figure 4.2 similarly shows mean delays per month for top 5 airports for all years. This graph seems to be agreeing with the previous observation that the delays are smaller in September across years. One interesting observation in figure 4.2 is that all of the top 5 airports seems to be having higher delays in the year of 2000. Moreover, for year 2000 airports DEN and ORD seems to be having similar delay patterns for months Jun, July and August and December to some extent.
+
+This visualization makes it easy to point out particularly bad months in a year. Moreover, we can identify airports that have higher seasonal delays or had higher seasonal delay in any particular year. For example, ORD in general has a lot of orange/red blocks. But one pattern that stands out starts around December 2006 and continues till December 2008. This pattern shows that there very high delays starting from December continuing till February of next year. This could be attributed to stormy winters which would generally occur around those months.
+
+# Conclusion
+
+With the new approach to Map Reduce job described in the first section, it was easier to get all of the data in one job which is a better approach than previously employed approach. For the visualization, instead of using network graphs (as done in `old.pdf`), we explore heat maps. We show how it was better to recognize certain patterns with those visualizations. The idea of visualizing mean delays per year as well as per month is also explored which was missing previously. From both of the visualizations, some interesting patterns emerge, which in spite of having data hand, were not presented previously.
 
 ```{r eval=FALSE, echo=FALSE}
 most_active_airports = read.table(paste(RESOURCE_DIR, "most-active-airport/part-r-00000", sep=""))
