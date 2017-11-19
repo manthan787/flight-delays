@@ -1,5 +1,11 @@
 # Visualizing Flight Delays
 
+Using flight ![on-time performance data](http://web.archive.org/web/20170113153149/http://transtats.bts.gov/DL_SelectFields.asp?Table_ID=236&DB_Short_Name=On-Time) published by Bureau of Transportation Statistics, flight delays are collected using a **Hadoop MapReduce job.**
+
+After gathering the data of interest, the visualizations were created in R. Following sections show the visualizations, to know more about the analysis, please read `report.pdf`.
+
+You can run the whole pipeline (includes running MapReduce job and building the report file with graphics), by following instructions in the **Running the project** section below.
+
 ## Top 5 Airports and Airlines based on activity
 
 ![top](images/top.png)
@@ -15,6 +21,8 @@
 ## Mean Delay Per Month
 
 ![monthly](images/monthly_delays.png)
+
+# Running the project
 
 ### Requirements
 
