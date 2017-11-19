@@ -1,4 +1,20 @@
-# A8 - Visualizing Delays
+# Visualizing Flight Delays
+
+## Top 5 Airports and Airlines based on activity
+
+![top](images/top.png)
+
+## Mean Delay Per Year
+
+![perYear](images/yearly_delays.png)
+
+## Mean Delay across all years for top 5 airports
+
+![airports](images/airport_heatmap.png)
+
+## Mean Delay Per Month
+
+![monthly](images/monthly_delays.png)
 
 ### Requirements
 
