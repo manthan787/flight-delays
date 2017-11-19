@@ -3,7 +3,7 @@ title: "A8: Visualizing Flight Delays"
 author: "Manthan Thakar"
 date: "November 7, 2017"
 geometry: "left=1cm,right=1cm,top=1cm,bottom=2cm"
-output: pdf_document
+output: html_document
 ---
 
 ```{r echo=FALSE}
