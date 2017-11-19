@@ -1,6 +1,6 @@
 # Visualizing Flight Delays
 
-Using flight ![on-time performance data](http://web.archive.org/web/20170113153149/http://transtats.bts.gov/DL_SelectFields.asp?Table_ID=236&DB_Short_Name=On-Time) published by Bureau of Transportation Statistics, flight delays are collected using a **Hadoop MapReduce job.**
+Using flight [on-time performance data](http://web.archive.org/web/20170113153149/http://transtats.bts.gov/DL_SelectFields.asp?Table_ID=236&DB_Short_Name=On-Time) published by Bureau of Transportation Statistics, flight delays are collected using a **Hadoop MapReduce job.**
 
 After gathering the data of interest, the visualizations were created in R. Following sections show the visualizations, to know more about the analysis, please read `report.pdf`.
 
