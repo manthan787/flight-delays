@@ -1,8 +1,5 @@
 # A8 - Visualizing Delays
 
-
-![top](images/top.png)
-
 ### Requirements
 
 Install `Java 1.8`
