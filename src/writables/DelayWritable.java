@@ -7,9 +7,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /***
- * @author: Manthan Thakar & Vineet Trivedi
- * Desctiption: This class contains the information required to compute Airport Delay and Flight delay (AirportId, AirlineId, Month, Year, Delay).
- * It is used in order to prevent the Jobs which compute Airport and Flight delay from iterating over the data again.
+ * @author: Manthan Thakar
+ * A custom writable to emit flight delays and counts of flights
  */
 
 public class DelayWritable  implements WritableComparable<DelayWritable> {

@@ -10,13 +10,6 @@ import java.io.IOException;
 
 /***
  * @author Manthan Thakar
- * Description:
- * Input: [Offset (Key), Record(Value)]
- * Output: [Offset (Key), CleanDataWritable(Value)]
- * It passes the record to Parser. If it passes the sanity checks performed by the parser
- * the information required by the remaining jobs (Delay, Month, Year, AirportId, AirlineId)
- * is contained in a custom Writable called CleanDataWritable.
- * The mapper then writes the Offset and the CleanDataWritable to the output.
  */
 public class DelayMapper extends Mapper<LongWritable, Text, Text, DelayWritable> {
 

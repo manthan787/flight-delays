@@ -17,15 +17,9 @@ import writables.DelayWritable;
 import java.io.IOException;
 /***
  * @author: Manthan Thakar
- * 
  * Job Description:
- * This job is used to clean the input data.
- * This job forms the base for all other jobs.
- * The remaining jobs need not iterate over the data again and get all their 
- * information from the CleanDataWritables (Output of this Job).
- * This job does not have a reducer and the mapper writes its output (CleanDataWritable)
- * directly to hdfs.
- * 
+ * This job is responsible for cleaning data and emitting valid flight records
+ * with delays
  */
 public class DelayJobDriver extends Configured implements Tool {
 
